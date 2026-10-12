@@ -1,0 +1,585 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="课表">
+<meta name="theme-color" content="#f7f7f9">
+<link rel="icon" href="data:,">
+<title>我的课表</title>
+<style>
+  *{box-sizing:border-box}
+  :root{
+    --bg:#f7f7f9;
+    --fg:#1c1c1e;
+    --muted:#8e8e93;
+    --sep:rgba(60,60,67,.14);
+    --soft:rgba(120,120,128,.12);
+    --accent:#0a84ff;
+    --red:#ff3b30;
+    --elev:#ffffff;
+    --shadow:0 8px 30px rgba(0,0,0,.16);
+    --gridline:rgba(60,60,67,.08);
+  }
+  html{
+    height:100%;
+    -webkit-text-size-adjust:100%;
+    touch-action:manipulation;
+  }
+  body{
+    margin:0;
+    height:100vh;
+    height:100dvh;
+    overflow:hidden;
+    display:flex;
+    flex-direction:column;
+    font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","PingFang SC","Helvetica Neue",Arial,sans-serif;
+    background:var(--bg);
+    color:var(--fg);
+    -webkit-user-select:none;
+    user-select:none;
+    -webkit-tap-highlight-color:transparent;
+  }
+  [hidden]{display:none !important}
+  header{
+    position:relative;
+    z-index:30;
+    flex:none;
+    background:rgba(247,247,249,.93);
+    -webkit-backdrop-filter:blur(14px);
+    backdrop-filter:blur(14px);
+    border-bottom:1px solid var(--sep);
+    padding:calc(8px + env(safe-area-inset-top)) 12px 8px;
+  }
+  .topbar{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:10px;
+    padding:0 4px;
+  }
+  h1{font-size:19px;font-weight:700;margin:0}
+  .ghost{
+    font-size:13px;
+    font-weight:600;
+    color:var(--accent);
+    background:rgba(10,132,255,.12);
+    border:none;
+    border-radius:999px;
+    padding:7px 13px;
+    min-height:32px;
+    cursor:pointer;
+  }
+  .weekbar{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:6px;
+    margin-top:6px;
+  }
+  .nav-btn{
+    width:44px;
+    height:44px;
+    border:none;
+    border-radius:50%;
+    background:transparent;
+    color:var(--fg);
+    font-size:26px;
+    line-height:1;
+    cursor:pointer;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    flex:none;
+  }
+  .nav-btn:disabled{opacity:.25}
+  .week-pill{
+    font-size:15px;
+    font-weight:700;
+    color:var(--fg);
+    background:var(--soft);
+    border:none;
+    border-radius:999px;
+    padding:10px 16px;
+    min-height:40px;
+    cursor:pointer;
+    white-space:nowrap;
+  }
+  .week-pill small{
+    font-size:12px;
+    font-weight:500;
+    color:var(--muted);
+    margin-left:4px;
+  }
+  .week-pill::after{
+    content:"▾";
+    font-size:10px;
+    color:var(--muted);
+    margin-left:5px;
+  }
+  .progress{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:8px;
+    margin-top:7px;
+  }
+  .progress-track{
+    width:110px;
+    height:4px;
+    border-radius:2px;
+    background:var(--soft);
+    overflow:hidden;
+  }
+  .progress-fill{
+    height:100%;
+    width:0;
+    border-radius:2px;
+    background:var(--accent);
+    transition:width .3s;
+  }
+  .progress-text{font-size:11px;color:var(--muted)}
+  .picker{
+    position:absolute;
+    top:calc(100% - 4px);
+    left:10px;
+    right:10px;
+    background:var(--elev);
+    border-radius:14px;
+    box-shadow:var(--shadow);
+    padding:10px;
+    z-index:40;
+  }
+  .picker-grid{
+    display:grid;
+    grid-template-columns:repeat(5,1fr);
+    gap:7px;
+  }
+  .wk{
+    position:relative;
+    height:42px;
+    border:none;
+    border-radius:10px;
+    background:var(--soft);
+    color:var(--fg);
+    font-size:15px;
+    font-weight:600;
+    cursor:pointer;
+  }
+  .wk.no-course{color:var(--muted);opacity:.55}
+  .wk.selected{background:var(--accent);color:#fff;opacity:1}
+  .wk.current::after{
+    content:"";
+    position:absolute;
+    left:50%;
+    bottom:4px;
+    width:4px;
+    height:4px;
+    margin-left:-2px;
+    border-radius:50%;
+    background:var(--red);
+  }
+  .wk.selected.current::after{background:#fff}
+  .grid-wrap{
+    flex:1 1 auto;
+    min-height:0;
+    overflow:auto;
+    overscroll-behavior-x:contain;
+    -webkit-overflow-scrolling:touch;
+    background:var(--elev);
+  }
+  .grid{
+    display:grid;
+    grid-template-columns:58px repeat(7,112px);
+    grid-template-rows:36px repeat(13,48px);
+    width:max-content;
+    min-width:100%;
+    background-image:linear-gradient(to bottom,var(--gridline) 0 1px,transparent 1px);
+    background-size:100% 48px;
+    background-position:0 36px;
+  }
+  .corner{
+    grid-row:1;
+    grid-column:1;
+    position:sticky;
+    left:0;
+    top:0;
+    z-index:5;
+    background:var(--elev);
+    border-bottom:1px solid var(--sep);
+    border-right:1px solid var(--gridline);
+  }
+  .day-h{
+    position:sticky;
+    top:0;
+    z-index:3;
+    background:var(--elev);
+    border-bottom:1px solid var(--sep);
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    line-height:1.15;
+    font-size:12px;
+    font-weight:700;
+  }
+  .day-h .date{font-size:9.5px;color:var(--muted);font-weight:500;margin-top:1px}
+  .day-h.today{color:var(--red)}
+  .day-h.today .date{color:var(--red);opacity:.75}
+  .tcell{
+    position:sticky;
+    left:0;
+    z-index:2;
+    background:var(--elev);
+    border-bottom:1px solid var(--gridline);
+    border-right:1px solid var(--gridline);
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    gap:1px;
+  }
+  .tcell .t1{font-size:10.5px;font-weight:600}
+  .tcell .t2{font-size:8.5px;color:var(--muted);letter-spacing:-.3px}
+  .today-col{
+    grid-row:2 / 15;
+    background:rgba(255,59,48,.045);
+    z-index:0;
+  }
+  .blk{
+    z-index:1;
+    margin:2px;
+    border-radius:10px;
+    border:1px solid var(--bd);
+    background:var(--bgc);
+    color:var(--tx);
+    padding:6px 7px;
+    overflow:hidden;
+    cursor:pointer;
+    align-self:stretch;
+  }
+  .blk:active{filter:brightness(.95)}
+  .blk-name{
+    font-size:12px;
+    font-weight:700;
+    line-height:1.25;
+    display:-webkit-box;
+    -webkit-line-clamp:3;
+    -webkit-box-orient:vertical;
+    overflow:hidden;
+  }
+  .blk-meta{font-size:9.5px;opacity:.85;margin-top:2px;line-height:1.3}
+  .blk-room{font-size:9.5px;opacity:.75;line-height:1.3}
+  .empty-tip{
+    position:fixed;
+    left:50%;
+    top:58%;
+    transform:translate(-50%,-50%);
+    font-size:14px;
+    color:var(--muted);
+    background:rgba(255,255,255,.92);
+    padding:10px 18px;
+    border-radius:999px;
+    box-shadow:0 2px 12px rgba(0,0,0,.08);
+    pointer-events:none;
+    z-index:5;
+  }
+  .sheet{position:fixed;inset:0;z-index:60}
+  .scrim{
+    position:absolute;
+    inset:0;
+    background:rgba(0,0,0,.35);
+    opacity:0;
+    transition:opacity .25s;
+  }
+  .sheet.open .scrim{opacity:1}
+  .sheet-body{
+    position:absolute;
+    left:0;
+    right:0;
+    bottom:0;
+    background:var(--elev);
+    border-radius:20px 20px 0 0;
+    padding:10px 18px calc(20px + env(safe-area-inset-bottom));
+    transform:translateY(105%);
+    transition:transform .3s cubic-bezier(.32,.72,0,1);
+    box-shadow:0 -8px 30px rgba(0,0,0,.12);
+    max-height:82vh;
+    overflow:auto;
+  }
+  .sheet.open .sheet-body{transform:translateY(0)}
+  .handle{
+    width:38px;
+    height:5px;
+    border-radius:3px;
+    background:rgba(60,60,67,.2);
+    margin:0 auto 12px;
+  }
+  .sheet-head{display:flex;align-items:center;gap:9px}
+  .dot{width:10px;height:10px;border-radius:50%;flex:none}
+  .sheet-name{font-size:18px;font-weight:700;line-height:1.3;flex:1}
+  .sheet-close{
+    width:32px;
+    height:32px;
+    border:none;
+    border-radius:50%;
+    background:var(--soft);
+    color:var(--muted);
+    font-size:14px;
+    cursor:pointer;
+    flex:none;
+  }
+  .sheet-teacher{font-size:13px;color:var(--muted);margin:4px 0 15px 19px}
+  .sched{
+    margin-bottom:8px;
+    padding:10px 12px;
+    border-radius:12px;
+    background:var(--bg);
+    border-left:3px solid var(--sd-bd);
+  }
+  .sched-line{font-size:14px;font-weight:600}
+  .sched-line b{font-weight:700}
+  .sched-sub{font-size:12.5px;color:var(--muted);margin-top:3px}
+</style>
+</head>
+<body>
+<header>
+  <div class="topbar">
+    <h1>我的课表</h1>
+    <button id="todayBtn" class="ghost" hidden>回到本周</button>
+  </div>
+  <div class="weekbar">
+    <button id="prevBtn" class="nav-btn" aria-label="上一周">‹</button>
+    <button id="weekBtn" class="week-pill" aria-label="选择周数"></button>
+    <button id="nextBtn" class="nav-btn" aria-label="下一周">›</button>
+  </div>
+  <div class="progress">
+    <div class="progress-track"><div id="progressFill" class="progress-fill"></div></div>
+    <div id="progressText" class="progress-text"></div>
+  </div>
+  <div id="picker" class="picker" hidden>
+    <div id="pickerGrid" class="picker-grid"></div>
+  </div>
+</header>
+<div id="gridWrap" class="grid-wrap">
+  <div id="grid" class="grid"></div>
+</div>
+<div id="emptyTip" class="empty-tip" hidden>本周无课</div>
+<div id="sheet" class="sheet" hidden>
+  <div id="scrim" class="scrim"></div>
+  <div id="sheetBody" class="sheet-body"></div>
+</div>
+<script id="core">
+var TERM_START = new Date(2026, 7, 31);
+var MAX_WEEK = 20;
+var DAY_NAMES = ["", "周一", "周二", "周三", "周四", "周五", "周六", "周日"];
+var PERIODS = [
+  ["8:30","9:15"],["9:20","10:05"],["10:25","11:10"],["11:15","12:00"],
+  ["13:30","14:15"],["14:20","15:05"],["15:25","16:10"],["16:15","17:00"],
+  ["17:05","17:50"],["18:30","19:15"],["19:20","20:05"],["20:15","21:00"],["21:05","21:50"]
+];
+var COURSES = [
+  {name:"自然语言处理", day:1, start:1, end:3, teacher:"刘书朋", room:"13-310", weeks:[[11,20]]},
+  {name:"深度学习", day:1, start:7, end:8, teacher:"林姝", room:"13-115", weeks:[[7,16]]},
+  {name:"深度学习", day:2, start:5, end:6, teacher:"林姝", room:"13-115", weeks:[[7,16]]},
+  {name:"高级数据库系统", day:2, start:12, end:13, teacher:"王华进", room:"13-107", weeks:[[11,20]]},
+  {name:"高级数据库系统", day:3, start:3, end:4, teacher:"王华进", room:"13-107", weeks:[[11,20]]},
+  {name:"自然语言处理", day:3, start:6, end:8, teacher:"刘书朋", room:"13-310", weeks:[[11,20]]},
+  {name:"计算机网络技术", day:3, start:10, end:11, teacher:"潘恒等", room:"13-113", weeks:[[2,4],[7,13]]},
+  {name:"计算机网络技术", day:4, start:1, end:2, teacher:"潘恒等", room:"5号楼4层多功能厅", weeks:[[2,4],[7,13]]},
+  {name:"新时代中国特色社会主义理论与实践-02班", day:5, start:5, end:8, teacher:"董天美", room:"5号楼4层多功能厅", weeks:[[6,14]]},
+  {name:"自然辩证法概论-02班", day:6, start:1, end:4, teacher:"赵俊海", room:"文体中心3楼报告厅", weeks:[[7,11],[14,17]]}
+];
+var PALETTE = {
+  "自然语言处理": {bg:"#dcf2e5", bd:"#7cc79a", tx:"#175e35"},
+  "深度学习": {bg:"#dfe7fb", bd:"#8ea7e6", tx:"#2a3f8f"},
+  "高级数据库系统": {bg:"#eadef6", bd:"#b18fdb", tx:"#542a87"},
+  "计算机网络技术": {bg:"#fcebcf", bd:"#dfa952", tx:"#7d5310"},
+  "新时代中国特色社会主义理论与实践": {bg:"#d5eaf0", bd:"#76b3c2", tx:"#12596a"},
+  "自然辩证法概论": {bg:"#f7d7d7", bd:"#d98a8a", tx:"#8a2424"}
+};
+var FALLBACK = {bg:"#e5e5ea", bd:"#aeaeb2", tx:"#3a3a3c"};
+function baseName(n){ return n.replace(/-[^-]*班$/,""); }
+function colorOf(name){ return PALETTE[baseName(name)] || FALLBACK; }
+function inWeek(c, w){ return c.weeks.some(function(r){ return w >= r[0] && w <= r[1]; }); }
+function hasAnyCourse(w){ return COURSES.some(function(c){ return inWeek(c, w); }); }
+function fmtDate(d){ return (d.getMonth()+1) + "/" + d.getDate(); }
+function weekStartDate(w){
+  var d = new Date(TERM_START.getFullYear(), TERM_START.getMonth(), TERM_START.getDate());
+  d.setDate(d.getDate() + (w-1)*7);
+  return d;
+}
+function weekOf(date){
+  var t = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+  var t0 = new Date(TERM_START.getFullYear(), TERM_START.getMonth(), TERM_START.getDate());
+  return Math.floor(Math.floor((t - t0) / 86400000) / 7) + 1;
+}
+function clampWeek(w){ return Math.min(MAX_WEEK, Math.max(1, w)); }
+function weekNow(){ return clampWeek(weekOf(new Date())); }
+function periodLabel(c){
+  return c.start === c.end ? "第" + c.start + "节" : "第" + c.start + "-" + c.end + "节";
+}
+function timeRange(c){ return PERIODS[c.start-1][0] + "-" + PERIODS[c.end-1][1]; }
+function weeksText(ranges){
+  return ranges.map(function(r){ return r[0] === r[1] ? String(r[0]) : r[0] + "-" + r[1]; }).join("、");
+}
+</script>
+<script>
+(function(){
+  var gridWrap = document.getElementById("gridWrap");
+  var grid = document.getElementById("grid");
+  var prevBtn = document.getElementById("prevBtn");
+  var nextBtn = document.getElementById("nextBtn");
+  var weekBtn = document.getElementById("weekBtn");
+  var todayBtn = document.getElementById("todayBtn");
+  var picker = document.getElementById("picker");
+  var pickerGrid = document.getElementById("pickerGrid");
+  var progressFill = document.getElementById("progressFill");
+  var progressText = document.getElementById("progressText");
+  var emptyTip = document.getElementById("emptyTip");
+  var sheet = document.getElementById("sheet");
+  var scrim = document.getElementById("scrim");
+  var sheetBody = document.getElementById("sheetBody");
+
+  var state = { week: weekNow() };
+  var scrollMem = { x: 0, y: 0 };
+
+  function todayWeekdayOf(w){
+    return w === weekNow() ? ((new Date().getDay() + 6) % 7) + 1 : 0;
+  }
+
+  function buildGrid(w){
+    var start = weekStartDate(w);
+    var tw = todayWeekdayOf(w);
+    var html = '<div class="corner"></div>';
+    for (var d = 1; d <= 7; d++){
+      var date = new Date(start.getFullYear(), start.getMonth(), start.getDate() + d - 1);
+      html += '<div class="day-h' + (d === tw ? " today" : "") + '" style="grid-row:1;grid-column:' + (d+1) + '">' +
+        '<span>' + DAY_NAMES[d] + '</span><span class="date">' + fmtDate(date) + '</span></div>';
+    }
+    if (tw > 0) html += '<div class="today-col" style="grid-column:' + (tw+1) + '"></div>';
+    for (var p = 1; p <= 13; p++){
+      html += '<div class="tcell" style="grid-row:' + (p+1) + '">' +
+        '<span class="t1">第' + p + '节</span>' +
+        '<span class="t2">' + PERIODS[p-1][0] + '-' + PERIODS[p-1][1] + '</span></div>';
+    }
+    COURSES.forEach(function(c){
+      if (!inWeek(c, w)) return;
+      var col = colorOf(c.name);
+      html += '<div class="blk" data-name="' + c.name + '" style="grid-row:' + (c.start+1) + ' / span ' + (c.end - c.start + 1) +
+        ';grid-column:' + (c.day+1) +
+        ';--bd:' + col.bd + ';--tx:' + col.tx + ';--bgc:' + col.bg + '">' +
+        '<div class="blk-name">' + c.name + '</div>' +
+        '<div class="blk-meta">' + periodLabel(c) + ' · 第' + weeksText(c.weeks) + '周</div>' +
+        '<div class="blk-room">' + c.room + '</div></div>';
+    });
+    return html;
+  }
+
+  function renderPicker(){
+    var cur = weekNow();
+    pickerGrid.innerHTML = "";
+    for (var w = 1; w <= MAX_WEEK; w++){
+      var b = document.createElement("button");
+      b.className = "wk" + (w === state.week ? " selected" : "") +
+        (hasAnyCourse(w) ? "" : " no-course") + (w === cur ? " current" : "");
+      b.textContent = w;
+      b.setAttribute("aria-label", "第" + w + "周");
+      (function(week){
+        b.addEventListener("click", function(){
+          setWeek(week);
+        });
+      })(w);
+      pickerGrid.appendChild(b);
+    }
+  }
+
+  function render(){
+    var w = state.week;
+    var start = weekStartDate(w);
+    var end = new Date(start.getFullYear(), start.getMonth(), start.getDate() + 6);
+    weekBtn.innerHTML = "第 " + w + " 周 <small>" + fmtDate(start) + "-" + fmtDate(end) + "</small>";
+    todayBtn.hidden = (w === weekNow());
+    prevBtn.disabled = w <= 1;
+    nextBtn.disabled = w >= MAX_WEEK;
+    var rw = weekNow();
+    progressFill.style.width = Math.round(rw / MAX_WEEK * 100) + "%";
+    progressText.textContent = "第" + rw + "周 / 共" + MAX_WEEK + "周";
+    renderPicker();
+    grid.innerHTML = buildGrid(w);
+    emptyTip.hidden = hasAnyCourse(w);
+    gridWrap.scrollLeft = scrollMem.x;
+    gridWrap.scrollTop = scrollMem.y;
+  }
+
+  function setWeek(w){
+    var next = clampWeek(w);
+    if (next === state.week){ picker.hidden = true; return; }
+    state.week = next;
+    picker.hidden = true;
+    render();
+  }
+
+  function openSheet(name){
+    var entries = COURSES.filter(function(c){ return c.name === name; });
+    if (!entries.length) return;
+    var col = colorOf(name);
+    var html = '<div class="handle"></div>' +
+      '<div class="sheet-head">' +
+        '<span class="dot" style="background:' + col.bd + '"></span>' +
+        '<span class="sheet-name">' + name + '</span>' +
+        '<button class="sheet-close" id="sheetClose" aria-label="关闭">✕</button>' +
+      '</div>' +
+      '<div class="sheet-teacher">教师 ' + entries[0].teacher + '</div>';
+    entries.forEach(function(c){
+      html += '<div class="sched" style="--sd-bd:' + col.bd + '">' +
+        '<div class="sched-line"><b>' + DAY_NAMES[c.day] + '</b> · ' + periodLabel(c) + ' · ' + timeRange(c) + '</div>' +
+        '<div class="sched-sub">第' + weeksText(c.weeks) + '周 · ' + c.room + '</div>' +
+      '</div>';
+    });
+    sheetBody.innerHTML = html;
+    sheet.hidden = false;
+    requestAnimationFrame(function(){ sheet.classList.add("open"); });
+    document.getElementById("sheetClose").addEventListener("click", closeSheet);
+  }
+
+  function closeSheet(){
+    sheet.classList.remove("open");
+    setTimeout(function(){ sheet.hidden = true; }, 300);
+  }
+
+  grid.addEventListener("click", function(e){
+    var blk = e.target.closest(".blk");
+    if (blk) openSheet(blk.getAttribute("data-name"));
+  });
+  scrim.addEventListener("click", closeSheet);
+  prevBtn.addEventListener("click", function(){ setWeek(state.week - 1); });
+  nextBtn.addEventListener("click", function(){ setWeek(state.week + 1); });
+  weekBtn.addEventListener("click", function(e){
+    e.stopPropagation();
+    picker.hidden = !picker.hidden;
+  });
+  todayBtn.addEventListener("click", function(){ setWeek(weekNow()); });
+  document.addEventListener("click", function(e){
+    if (!picker.hidden && !picker.contains(e.target) && !weekBtn.contains(e.target)){
+      picker.hidden = true;
+    }
+  });
+  document.addEventListener("keydown", function(e){
+    if (e.key === "ArrowLeft") setWeek(state.week - 1);
+    if (e.key === "ArrowRight") setWeek(state.week + 1);
+    if (e.key === "Escape"){ closeSheet(); picker.hidden = true; }
+  });
+  gridWrap.addEventListener("scroll", function(){
+    scrollMem.x = gridWrap.scrollLeft;
+    scrollMem.y = gridWrap.scrollTop;
+  }, {passive:true});
+
+  render();
+})();
+</script>
+</body>
+</html>
