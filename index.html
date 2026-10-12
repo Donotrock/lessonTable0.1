@@ -385,12 +385,12 @@ var PERIODS = [
 ];
 var COURSES = [
   {name:"自然语言处理", day:1, start:1, end:3, teacher:"刘书朋", room:"13-310", weeks:[[11,20]]},
-  {name:"深度学习", day:1, start:7, end:8, teacher:"林姝", room:"13-115", weeks:[[7,16]]},
-  {name:"深度学习", day:2, start:5, end:6, teacher:"林姝", room:"13-115", weeks:[[7,16]]},
+  {name:"深度学习", day:1, start:7, end:8, teacher:"林姝", room:"13-303", weeks:[[7,16]]},
+  {name:"深度学习", day:2, start:5, end:6, teacher:"林姝", room:"13-303", weeks:[[7,16]]},
   {name:"高级数据库系统", day:2, start:12, end:13, teacher:"王华进", room:"13-107", weeks:[[11,20]]},
   {name:"高级数据库系统", day:3, start:3, end:4, teacher:"王华进", room:"13-107", weeks:[[11,20]]},
   {name:"自然语言处理", day:3, start:6, end:8, teacher:"刘书朋", room:"13-310", weeks:[[11,20]]},
-  {name:"计算机网络技术", day:3, start:10, end:11, teacher:"潘恒等", room:"13-113", weeks:[[2,4],[7,13]]},
+  {name:"计算机网络技术", day:3, start:10, end:11, teacher:"潘恒等", room:"13-310", weeks:[[2,4],[7,13]]},
   {name:"计算机网络技术", day:4, start:1, end:2, teacher:"潘恒等", room:"5号楼4层多功能厅", weeks:[[2,4],[7,13]]},
   {name:"新时代中国特色社会主义理论与实践-02班", day:5, start:5, end:8, teacher:"董天美", room:"5号楼4层多功能厅", weeks:[[6,14]]},
   {name:"自然辩证法概论-02班", day:6, start:1, end:4, teacher:"赵俊海", room:"文体中心3楼报告厅", weeks:[[7,11],[14,17]]}
@@ -471,7 +471,7 @@ function weeksText(ranges){
     for (var p = 1; p <= 13; p++){
       html += '<div class="tcell" style="grid-row:' + (p+1) + '">' +
         '<span class="t1">' + p + '</span>' +
-        '<span class="t2">' + PERIODS[p-1][0] + '</span></div>';
+        '<span class="t2">' + PERIODS[p-1][0] + '-' + PERIODS[p-1][1] + '</span></div>';
     }
     COURSES.forEach(function(c){
       if (!inWeek(c, w)) return;
