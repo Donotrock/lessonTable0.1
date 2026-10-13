@@ -153,6 +153,11 @@
     box-shadow:var(--shadow);
     padding:10px;
     z-index:40;
+    animation:pickerIn .18s ease-out;
+  }
+  @keyframes pickerIn{
+    from{opacity:0;transform:translateY(-6px)}
+    to{opacity:1;transform:none}
   }
   .picker-grid{
     display:grid;
@@ -454,6 +459,8 @@ function weeksText(ranges){
   var state = { week: weekNow() };
   var scrollMem = { x: 0, y: 0 };
   var swipedAt = 0;
+  var switchTimer = null;
+  var reduceMotion = window.matchMedia ? window.matchMedia("(prefers-reduced-motion: reduce)").matches : false;
 
   function todayWeekdayOf(w){
     return w === weekNow() ? ((new Date().getDay() + 6) % 7) + 1 : 0;
@@ -525,10 +532,26 @@ function weeksText(ranges){
 
   function setWeek(w){
     var next = clampWeek(w);
-    if (next === state.week){ picker.hidden = true; return; }
-    state.week = next;
     picker.hidden = true;
-    render();
+    if (next === state.week) return;
+    var dir = next > state.week ? 1 : -1;
+    state.week = next;
+    if (reduceMotion){ render(); return; }
+    if (switchTimer){ clearTimeout(switchTimer); switchTimer = null; }
+    grid.style.transition = "transform .14s ease-in, opacity .14s ease-in";
+    grid.style.transform = "translateX(" + (-30 * dir) + "px)";
+    grid.style.opacity = "0";
+    switchTimer = setTimeout(function(){
+      switchTimer = null;
+      render();
+      grid.style.transition = "none";
+      grid.style.transform = "translateX(" + (30 * dir) + "px)";
+      grid.style.opacity = "0";
+      void grid.offsetWidth;
+      grid.style.transition = "transform .22s cubic-bezier(.25,.6,.35,1), opacity .22s";
+      grid.style.transform = "translateX(0)";
+      grid.style.opacity = "1";
+    }, 130);
   }
 
   function openSheet(name){
@@ -597,7 +620,7 @@ function weeksText(ranges){
     var dy = e.changedTouches[0].clientY - sy;
     if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy) * 1.5){
       swipedAt = Date.now();
-      setWeek(dx > 0 ? state.week + 1 : state.week - 1);
+      setWeek(dx < 0 ? state.week + 1 : state.week - 1);
     }
   }, {passive:true});
 
