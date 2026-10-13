@@ -453,6 +453,7 @@ function weeksText(ranges){
 
   var state = { week: weekNow() };
   var scrollMem = { x: 0, y: 0 };
+  var swipedAt = 0;
 
   function todayWeekdayOf(w){
     return w === weekNow() ? ((new Date().getDay() + 6) % 7) + 1 : 0;
@@ -559,6 +560,7 @@ function weeksText(ranges){
   }
 
   grid.addEventListener("click", function(e){
+    if (Date.now() - swipedAt < 350) return;
     var blk = e.target.closest(".blk");
     if (blk) openSheet(blk.getAttribute("data-name"));
   });
@@ -583,6 +585,20 @@ function weeksText(ranges){
   gridWrap.addEventListener("scroll", function(){
     scrollMem.x = gridWrap.scrollLeft;
     scrollMem.y = gridWrap.scrollTop;
+  }, {passive:true});
+
+  var sx = 0, sy = 0;
+  gridWrap.addEventListener("touchstart", function(e){
+    sx = e.touches[0].clientX;
+    sy = e.touches[0].clientY;
+  }, {passive:true});
+  gridWrap.addEventListener("touchend", function(e){
+    var dx = e.changedTouches[0].clientX - sx;
+    var dy = e.changedTouches[0].clientY - sy;
+    if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy) * 1.5){
+      swipedAt = Date.now();
+      setWeek(dx > 0 ? state.week + 1 : state.week - 1);
+    }
   }, {passive:true});
 
   render();
